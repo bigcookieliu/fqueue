@@ -213,6 +213,7 @@ struct fqueue::impl {
 
 	impl(const char *fname, std::size_t fsize)
 		:file(fname)
+		,fsize(fsize)
 	{
 		if ( file.size() == 0 ) {
 			queue_info qi = {size_of_queue_info, size_of_queue_info, 0, 0};
@@ -232,6 +233,13 @@ struct fqueue::impl {
 		return qi.records;
 	}
 
+	std::uint64_t index() {
+		queue_info qi;
+		read_info(&qi);
+
+		return qi.index;
+	}
+
 	void write_info(const queue_info &qi) {
 		FQUEUE_THROW_IF(true != file.seek(0));
 		FQUEUE_THROW_IF(true != file.write(&qi, 0, size_of_queue_info));
@@ -247,6 +255,15 @@ struct fqueue::impl {
 		qi.rpos = qi.wpos = size_of_queue_info;
 		qi.records = 0;
 		write_info(qi);
+	}
+
+	void truncate() {
+		reset();
+		if ( fsize >= size_of_queue_info ) {
+			file.resize(fsize);
+		} else {
+			file.resize(size_of_queue_info);
+		}
 	}
 
 	std::uint64_t push(const void *ptr, std::size_t size) {
@@ -374,6 +391,7 @@ struct fqueue::impl {
 	}
 
 	file_io file;
+	const std::uint32_t fsize;
 };
 
 /**************************************************************************/
@@ -400,10 +418,12 @@ fqueue& fqueue::operator=(fqueue &&r) {
 /**************************************************************************/
 
 std::size_t fqueue::records() const { return pimpl->records(); }
+std::uint64_t fqueue::index() const { return pimpl->index(); }
 
 bool fqueue::empty() const { return 0 == pimpl->records(); }
 
 void fqueue::reset() { pimpl->reset(); }
+void fqueue::truncate() { pimpl->truncate(); }
 
 std::uint64_t fqueue::push(const void *ptr, std::size_t size) { return pimpl->push(ptr, size); }
 fqueue::record fqueue::front() { return pimpl->front(); }

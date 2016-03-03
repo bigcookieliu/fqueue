@@ -47,14 +47,27 @@ struct fqueue {
 
 	fqueue(const char *fname, std::size_t fsize = 1024*1024*100);
 	fqueue(fqueue &&r);
-	~fqueue();
 	fqueue& operator= (fqueue &&r);
+	~fqueue();
 
+	/* get the number of records in the data-file */
 	std::size_t records() const;
+
+	/* get the max record index from the data-file */
+	std::uint64_t index() const;
+
+	/* check if data-file has no records */
 	bool empty() const;
 
+	/* clear the data-file records counter, but leave the file
+	 * size and record index unchanged */
 	void reset();
 
+	/* clear the data-file records counter and truncate the file
+	 * size to 'fsize' specified in ctor, but leave the index unchanged */
+	void truncate();
+
+	/** push one record at back */
 	std::uint64_t push(const void *ptr, std::size_t size);
 
 	struct record {
@@ -62,7 +75,9 @@ struct fqueue {
 		std::unique_ptr<char[]> ptr;
 		std::size_t size;
 	};
+	/** get front record */
 	record front();
+	/** pop front record */
 	record pop();
 
 private:

@@ -117,7 +117,8 @@ void test01(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 	static const char *fn = "fq1.dat";
 	::remove(fn);
 
-	fqueue::fqueue fq(fn);
+	fqueue::fqueue fq(fn, 0);
+	MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
 	for ( std::size_t i = 0; i < iterations; ++i ) {
 		const auto buf = make_buf(minsize, maxsize);
 		std::uint64_t ii = fq.push(buf.first.get(), buf.second);
@@ -129,6 +130,10 @@ void test01(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 		MY_ASSERT(rec.size == buf.second);
 		MY_ASSERT(0 == std::memcmp(rec.ptr.get(), buf.first.get(), buf.second));
 	}
+
+	MY_ASSERT(file_size(fn) != sizeof(std::uint64_t)*4);
+	fq.truncate();
+	MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
 }
 
 /**************************************************************************/
@@ -142,21 +147,26 @@ void test02(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 	fqueue::fqueue fq(fn);
 	MY_ASSERT(fq.records() == 0);
 	MY_ASSERT(fq.empty() == true);
+	MY_ASSERT(fq.index() == 0);
 
 	const auto buf = make_buf(minsize, maxsize);
 
 	fq.push(buf.first.get(), buf.second);
 	MY_ASSERT(fq.records() == 1);
+	MY_ASSERT(fq.index() == 1);
 
 	fq.push(buf.first.get(), buf.second);
 	MY_ASSERT(fq.records() == 2);
+	MY_ASSERT(fq.index() == 2);
 
 	fq.pop();
 	MY_ASSERT(fq.records() == 1);
+	MY_ASSERT(fq.index() == 2);
 
 	fq.pop();
 	MY_ASSERT(fq.records() == 0);
 	MY_ASSERT(fq.empty() == true);
+	MY_ASSERT(fq.index() == 2);
 
 	bool thrown = false;
 	try {
@@ -165,6 +175,7 @@ void test02(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 		thrown = true;
 	}
 	MY_ASSERT(true == thrown);
+	MY_ASSERT(fq.index() == 2);
 }
 
 /**************************************************************************/
@@ -176,6 +187,7 @@ void test03(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 	fqueue::fqueue fq(fn, 0);
 	MY_ASSERT(fq.records() == 0);
 	MY_ASSERT(fq.empty() == true);
+	MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
 
 	for ( std::size_t i = 0; i < iterations; ++i ) {
 		const auto buf = make_buf(minsize, maxsize);

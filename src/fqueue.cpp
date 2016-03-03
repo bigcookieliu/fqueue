@@ -74,14 +74,14 @@ namespace fqueue {
 	if ( (expr) ) { \
 		char buf[32]; \
 		::snprintf(buf, sizeof(buf), "%u", (unsigned)::GetLastError()); \
-		FQUEUE_THROW("expression \"" #expr "\" fail with GetLastError()=" + buf); \
+		FQUEUE_THROW("expression \"" #expr "\" is true with GetLastError()=" + buf); \
 	}
 #else
 #define FQUEUE_THROW_IF(expr) \
 	if ( (expr) ) { \
 		char buf[32]; \
 		::snprintf(buf, sizeof(buf), "%d", errno); \
-		FQUEUE_THROW("expression \"" #expr "\" fail with errno=" + buf); \
+		FQUEUE_THROW("expression \"" #expr "\" is true with errno=" + buf); \
 	}
 #endif // _WIN32
 
@@ -217,7 +217,8 @@ struct fqueue::impl {
 		if ( file.size() == 0 ) {
 			queue_info qi = {size_of_queue_info, size_of_queue_info, 0, 0};
 			write_info(qi);
-			file.resize(fsize);
+			if ( fsize > size_of_queue_info )
+				file.resize(fsize);
 		}
 	}
 
@@ -295,6 +296,8 @@ struct fqueue::impl {
 		impl::queue_info qi;
 		read_info(&qi);
 
+		FQUEUE_THROW_IF(0 == qi.records);
+
 		FQUEUE_EXPAND_EXPR(
 			std::cout
 			<< "front(): rd: rpos=" << qi.rpos
@@ -323,6 +326,8 @@ struct fqueue::impl {
 	fqueue::record pop() {
 		impl::queue_info qi;
 		read_info(&qi);
+
+		FQUEUE_THROW_IF(0 == qi.records);
 
 		FQUEUE_EXPAND_EXPR(
 			std::cout

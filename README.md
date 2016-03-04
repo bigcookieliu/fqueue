@@ -1,2 +1,2 @@
 # fqueue
-Persistent file queue of bufers
+Persistent file queue of buffers

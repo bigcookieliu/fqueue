@@ -68,12 +68,13 @@ struct fqueue {
     void truncate();
 
     /** push one record at back */
-    std::uint64_t push(const void *ptr, std::size_t size);
+    std::uint64_t push(const void *ptr, std::uint32_t size);
 
     struct record {
+        std::uint64_t nstime;
         std::uint64_t idx;
         std::unique_ptr<char[]> ptr;
-        std::size_t size;
+        std::uint32_t size;
     };
     /** get front record */
     record front();

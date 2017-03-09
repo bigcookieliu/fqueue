@@ -36,6 +36,7 @@
 #include <fqueue/fqueue.hpp>
 
 #include <stdexcept>
+#include <ctime>
 
 #ifdef _WIN32
 #	include <windows.h>
@@ -216,7 +217,13 @@ struct fqueue::impl {
         ,fsize(fsize)
     {
         if ( file.size() == 0 ) {
-            queue_info qi = {size_of_queue_info, size_of_queue_info, 0, 0};
+            const queue_info qi = {
+                 size_of_queue_info
+                ,size_of_queue_info
+                ,0
+                ,0
+            };
+
             write_info(qi);
             if ( fsize > size_of_queue_info )
                 file.resize(fsize);
@@ -225,6 +232,13 @@ struct fqueue::impl {
 
     ~impl()
     {}
+
+    static std::uint64_t current_time() {
+        ::timespec ts;
+        ::clock_gettime(CLOCK_REALTIME_COARSE, &ts);
+
+        return static_cast<std::uint64_t>((ts.tv_sec*1000000000ll)+ts.tv_nsec);
+    }
 
     std::size_t records() {
         queue_info qi;
@@ -266,7 +280,7 @@ struct fqueue::impl {
         }
     }
 
-    std::uint64_t push(const void *ptr, std::size_t size) {
+    std::uint64_t push(const void *ptr, std::uint32_t size) {
         impl::queue_info qi = {0,0,0,0};
         read_info(&qi);
 
@@ -280,21 +294,24 @@ struct fqueue::impl {
         const std::uint64_t wpos = qi.wpos;
         FQUEUE_THROW_IF(true != file.seek(wpos));
 
-        const std::uint32_t block_size = static_cast<std::uint32_t>(size);
-        FQUEUE_THROW_IF(true != file.write(&block_size, qi.wpos, sizeof(block_size)));
-        qi.wpos += sizeof(block_size);
+        const std::uint64_t nstime = current_time();
+        FQUEUE_THROW_IF(true != file.write(&nstime, qi.wpos, sizeof(nstime)));
+        qi.wpos += sizeof(nstime);
+
+        FQUEUE_THROW_IF(true != file.write(&size, qi.wpos, sizeof(size)));
+        qi.wpos += sizeof(size);
 
         FQUEUE_THROW_IF(true != file.write(ptr, qi.wpos, size));
         qi.wpos += size;
 
         FQUEUE_EXPAND_EXPR(
             std::cout
-            << "buf+size=" << block_size+sizeof(block_size)
+            << "buf+size=" << size+sizeof(size)
             << ", wpos=" << wpos
             << ", qi.wpos=" << qi.wpos << std::endl;
         )
 
-                ++qi.records;
+        ++qi.records;
         ++qi.index;
 
         FQUEUE_EXPAND_EXPR(
@@ -324,6 +341,9 @@ struct fqueue::impl {
 
         FQUEUE_THROW_IF(true != file.seek(qi.rpos));
 
+        std::uint64_t nstime = 0;
+        FQUEUE_THROW_IF(true != file.read(&nstime, sizeof(nstime)));
+
         std::uint32_t block_size = 0;
         FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
 
@@ -331,7 +351,8 @@ struct fqueue::impl {
         FQUEUE_THROW_IF(!ptr);
 
         fqueue::record rec = {
-            qi.index
+             nstime
+            ,qi.index
             ,std::move(ptr)
             ,block_size
         };
@@ -355,6 +376,10 @@ struct fqueue::impl {
 
         FQUEUE_THROW_IF(true != file.seek(qi.rpos));
 
+        std::uint64_t nstime = 0;
+        FQUEUE_THROW_IF(true != file.read(&nstime, sizeof(nstime)));
+        qi.rpos += sizeof(nstime);
+
         std::uint32_t block_size = 0;
         FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
         qi.rpos += sizeof(block_size);
@@ -363,7 +388,8 @@ struct fqueue::impl {
         FQUEUE_THROW_IF(!ptr);
 
         fqueue::record rec = {
-            qi.index
+             nstime
+            ,qi.index
             ,std::move(ptr)
             ,block_size
         };
@@ -425,7 +451,7 @@ bool fqueue::empty() const { return 0 == pimpl->records(); }
 void fqueue::reset() { pimpl->reset(); }
 void fqueue::truncate() { pimpl->truncate(); }
 
-std::uint64_t fqueue::push(const void *ptr, std::size_t size) { return pimpl->push(ptr, size); }
+std::uint64_t fqueue::push(const void *ptr, std::uint32_t size) { return pimpl->push(ptr, size); }
 fqueue::record fqueue::front() { return pimpl->front(); }
 fqueue::record fqueue::pop() { return pimpl->pop(); }
 

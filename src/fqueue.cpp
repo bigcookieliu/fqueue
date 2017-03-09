@@ -1,5 +1,5 @@
 
-// Copyright (c) 2015-2016 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2015-2017 niXman (i dot nixman dog gmail dot com). All
 // rights reserved.
 //
 // This file is part of FQUEUE(https://github.com/niXman/fqueue) project.
@@ -54,7 +54,7 @@
 #if FQUEUE_DEBUG_ENABLED
 #	include <iostream>
 #	define FQUEUE_EXPAND_EXPR(...) \
-	__VA_ARGS__
+        __VA_ARGS__
 #else
 #	define FQUEUE_EXPAND_EXPR(...)
 #endif
@@ -67,22 +67,22 @@ namespace fqueue {
 #define STRINGIZE(x) _STRINGIZE(x)
 
 #define FQUEUE_THROW(...) \
-	throw std::runtime_error(std::string("FQUEUE: " __FILE__ "(" STRINGIZE(__LINE__) "): ") + __VA_ARGS__)
+    throw std::runtime_error(std::string("FQUEUE: " __FILE__ "(" STRINGIZE(__LINE__) "): ") + __VA_ARGS__)
 
 #ifdef _WIN32
 #define FQUEUE_THROW_IF(expr) \
-	if ( (expr) ) { \
-		char buf[32]; \
-		::snprintf(buf, sizeof(buf), "%u", (unsigned)::GetLastError()); \
-		FQUEUE_THROW("expression \"" #expr "\" is true with GetLastError()=" + buf); \
-	}
+    if ( (expr) ) { \
+        char buf[32]; \
+        ::snprintf(buf, sizeof(buf), "%u", (unsigned)::GetLastError()); \
+        FQUEUE_THROW("expression \"" #expr "\" is true with GetLastError()=" + buf); \
+    }
 #else
 #define FQUEUE_THROW_IF(expr) \
-	if ( (expr) ) { \
-		char buf[32]; \
-		::snprintf(buf, sizeof(buf), "%d", errno); \
-		FQUEUE_THROW("expression \"" #expr "\" is true with errno=" + buf); \
-	}
+    if ( (expr) ) { \
+        char buf[32]; \
+        ::snprintf(buf, sizeof(buf), "%d", errno); \
+        FQUEUE_THROW("expression \"" #expr "\" is true with errno=" + buf); \
+    }
 #endif // _WIN32
 
 /**************************************************************************/
@@ -90,111 +90,111 @@ namespace fqueue {
 #ifdef _WIN32
 
 struct file_io {
-	file_io(const char *fname)
-		:fd(INVALID_HANDLE_VALUE)
-	{
-		fd = ::CreateFileA(
-			 fname
-			,GENERIC_READ|GENERIC_WRITE
-			,0
-			,NULL
-			,CREATE_NEW
-			,FILE_FLAG_WRITE_THROUGH|FILE_FLAG_NO_BUFFERING
-			,NULL
-		);
-		FQUEUE_THROW_IF(fd == INVALID_HANDLE_VALUE);
-	}
-	~file_io() {
-		if ( is_open() )
-			close();
-	}
+    file_io(const char *fname)
+        :fd(INVALID_HANDLE_VALUE)
+    {
+        fd = ::CreateFileA(
+             fname
+            ,GENERIC_READ|GENERIC_WRITE
+            ,0
+            ,NULL
+            ,CREATE_NEW
+            ,FILE_FLAG_WRITE_THROUGH|FILE_FLAG_NO_BUFFERING
+            ,NULL
+        );
+        FQUEUE_THROW_IF(fd == INVALID_HANDLE_VALUE);
+    }
+    ~file_io() {
+        if ( is_open() )
+            close();
+    }
 
-	bool is_open() const { return fd != INVALID_HANDLE_VALUE; }
-	void close() { ::CloseHandle(fd); fd = INVALID_HANDLE_VALUE; }
+    bool is_open() const { return fd != INVALID_HANDLE_VALUE; }
+    void close() { ::CloseHandle(fd); fd = INVALID_HANDLE_VALUE; }
 
-	std::size_t size() {
-		LARGE_INTEGER fsize;
-		::GetFileSizeEx(fd, &fsize);
+    std::size_t size() {
+        LARGE_INTEGER fsize;
+        ::GetFileSizeEx(fd, &fsize);
 
-		return fsize.QuadPart;
-	}
+        return fsize.QuadPart;
+    }
 
-	bool resize(std::size_t size) {
-		if ( INVALID_SET_FILE_POINTER != ::SetFilePointer(fd, size, NULL, FILE_BEGIN) ) {
-			return TRUE == ::SetEndOfFile(fd);
-		}
+    bool resize(std::size_t size) {
+        if ( INVALID_SET_FILE_POINTER != ::SetFilePointer(fd, size, NULL, FILE_BEGIN) ) {
+            return TRUE == ::SetEndOfFile(fd);
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	bool seek(std::size_t pos) {
-		return INVALID_SET_FILE_POINTER != ::SetFilePointer(fd, pos, NULL, FILE_BEGIN);
-	}
+    bool seek(std::size_t pos) {
+        return INVALID_SET_FILE_POINTER != ::SetFilePointer(fd, pos, NULL, FILE_BEGIN);
+    }
 
-	bool write(const void *ptr, std::size_t /*spos*/, std::size_t size) {
-		DWORD wr = 0;
-		// TODO: flush
-		return TRUE == ::WriteFile(fd, ptr, size, &wr, NULL) && wr == size;
-	}
-	bool read(void *ptr, std::size_t size) {
-		DWORD rd = 0;
-		return TRUE == ::ReadFile(fd, ptr, size, &rd, NULL) && rd == size;
-	}
+    bool write(const void *ptr, std::size_t /*spos*/, std::size_t size) {
+        DWORD wr = 0;
+        // TODO: flush
+        return TRUE == ::WriteFile(fd, ptr, size, &wr, NULL) && wr == size;
+    }
+    bool read(void *ptr, std::size_t size) {
+        DWORD rd = 0;
+        return TRUE == ::ReadFile(fd, ptr, size, &rd, NULL) && rd == size;
+    }
 
 private:
-	HANDLE fd;
+    HANDLE fd;
 };
 
 #else
 
 struct file_io {
-	file_io(const char *fname)
-		:fd(-1)
-	{
-		fd = ::open(fname, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
-		FQUEUE_THROW_IF(fd == -1);
-	}
-	~file_io() {
-		if ( is_open() )
-			close();
-	}
+    file_io(const char *fname)
+        :fd(-1)
+    {
+        fd = ::open(fname, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+        FQUEUE_THROW_IF(fd == -1);
+    }
+    ~file_io() {
+        if ( is_open() )
+            close();
+    }
 
-	bool is_open() const { return fd != -1; }
-	void close() { ::close(fd); fd = -1; }
+    bool is_open() const { return fd != -1; }
+    void close() { ::close(fd); fd = -1; }
 
-	std::size_t size() {
-		struct stat st;
-		::fstat(fd, &st);
+    std::size_t size() {
+        struct stat st;
+        ::fstat(fd, &st);
 
-		return st.st_size;
-	}
+        return st.st_size;
+    }
 
-	bool resize(std::size_t size) {
-		return 0 == ::ftruncate(fd, size);
-	}
+    bool resize(std::size_t size) {
+        return 0 == ::ftruncate(fd, size);
+    }
 
-	bool seek(std::size_t pos) {
-		return pos == (std::size_t)::lseek(fd, pos, SEEK_SET);
-	}
+    bool seek(std::size_t pos) {
+        return pos == static_cast<std::size_t>(::lseek(fd, pos, SEEK_SET));
+    }
 
-	bool write(const void *ptr, std::size_t spos, std::size_t size) {
-		if ( size == (std::size_t)::write(fd, ptr, size) ) {
-			return 0 == ::sync_file_range(
-				 fd
-				,spos
-				,size
-				,SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE|SYNC_FILE_RANGE_WAIT_AFTER
-			);
-		}
+    bool write(const void *ptr, std::size_t spos, std::size_t size) {
+        if ( size == static_cast<std::size_t>(::write(fd, ptr, size)) ) {
+            return 0 == ::sync_file_range(
+                 fd
+                ,spos
+                ,size
+                ,SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE|SYNC_FILE_RANGE_WAIT_AFTER
+            );
+        }
 
-		return false;
-	}
-	bool read(void *ptr, std::size_t size) {
-		return size == (std::size_t)::read(fd, ptr, size);
-	}
+        return false;
+    }
+    bool read(void *ptr, std::size_t size) {
+        return size == static_cast<std::size_t>(::read(fd, ptr, size));
+    }
 
 private:
-	int fd;
+    int fd;
 };
 
 #endif
@@ -202,217 +202,217 @@ private:
 /**************************************************************************/
 
 struct fqueue::impl {
-	struct queue_info {
-		std::uint64_t rpos;
-		std::uint64_t wpos;
-		std::uint64_t records;
-		std::uint64_t index;
-	};
-	enum { size_of_queue_info = sizeof(queue_info) };
-	static_assert(size_of_queue_info == sizeof(std::uint64_t)*4, "bad sizeof(queue_info)");
+    struct queue_info {
+        std::uint64_t rpos;
+        std::uint64_t wpos;
+        std::uint64_t records;
+        std::uint64_t index;
+    };
+    enum { size_of_queue_info = sizeof(queue_info) };
+    static_assert(size_of_queue_info == sizeof(std::uint64_t)*4, "bad sizeof(queue_info)");
 
-	impl(const char *fname, std::size_t fsize)
-		:file(fname)
-		,fsize(fsize)
-	{
-		if ( file.size() == 0 ) {
-			queue_info qi = {size_of_queue_info, size_of_queue_info, 0, 0};
-			write_info(qi);
-			if ( fsize > size_of_queue_info )
-				file.resize(fsize);
-		}
-	}
+    impl(const char *fname, std::size_t fsize)
+        :file(fname)
+        ,fsize(fsize)
+    {
+        if ( file.size() == 0 ) {
+            queue_info qi = {size_of_queue_info, size_of_queue_info, 0, 0};
+            write_info(qi);
+            if ( fsize > size_of_queue_info )
+                file.resize(fsize);
+        }
+    }
 
-	~impl()
-	{}
+    ~impl()
+    {}
 
-	std::size_t records() {
-		queue_info qi;
-		read_info(&qi);
+    std::size_t records() {
+        queue_info qi;
+        read_info(&qi);
 
-		return qi.records;
-	}
+        return qi.records;
+    }
 
-	std::uint64_t index() {
-		queue_info qi;
-		read_info(&qi);
+    std::uint64_t index() {
+        queue_info qi;
+        read_info(&qi);
 
-		return qi.index;
-	}
+        return qi.index;
+    }
 
-	void write_info(const queue_info &qi) {
-		FQUEUE_THROW_IF(true != file.seek(0));
-		FQUEUE_THROW_IF(true != file.write(&qi, 0, size_of_queue_info));
-	}
-	void read_info(queue_info *qi) {
-		FQUEUE_THROW_IF(true != file.seek(0));
-		FQUEUE_THROW_IF(true != file.read(qi, size_of_queue_info));
-	}
+    void write_info(const queue_info &qi) {
+        FQUEUE_THROW_IF(true != file.seek(0));
+        FQUEUE_THROW_IF(true != file.write(&qi, 0, size_of_queue_info));
+    }
+    void read_info(queue_info *qi) {
+        FQUEUE_THROW_IF(true != file.seek(0));
+        FQUEUE_THROW_IF(true != file.read(qi, size_of_queue_info));
+    }
 
-	void reset() {
-		queue_info qi;
-		read_info(&qi);
-		qi.rpos = qi.wpos = size_of_queue_info;
-		qi.records = 0;
-		write_info(qi);
-	}
+    void reset() {
+        queue_info qi;
+        read_info(&qi);
+        qi.rpos = qi.wpos = size_of_queue_info;
+        qi.records = 0;
+        write_info(qi);
+    }
 
-	void truncate() {
-		reset();
-		if ( fsize >= size_of_queue_info ) {
-			file.resize(fsize);
-		} else {
-			file.resize(size_of_queue_info);
-		}
-	}
+    void truncate() {
+        reset();
+        if ( fsize >= size_of_queue_info ) {
+            file.resize(fsize);
+        } else {
+            file.resize(size_of_queue_info);
+        }
+    }
 
-	std::uint64_t push(const void *ptr, std::size_t size) {
-		impl::queue_info qi = {0,0,0,0};
-		read_info(&qi);
+    std::uint64_t push(const void *ptr, std::size_t size) {
+        impl::queue_info qi = {0,0,0,0};
+        read_info(&qi);
 
-		FQUEUE_EXPAND_EXPR(
-			std::cout
-			<< "push(): rd: rpos=" << qi.rpos
-			<< ", wpos=" << qi.wpos
-			<< ", records=" << qi.records << std::endl;
-		)
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "push(): rd: rpos=" << qi.rpos
+            << ", wpos=" << qi.wpos
+            << ", records=" << qi.records << std::endl;
+        )
 
-		const std::uint64_t wpos = qi.wpos;
-		FQUEUE_THROW_IF(true != file.seek(wpos));
+        const std::uint64_t wpos = qi.wpos;
+        FQUEUE_THROW_IF(true != file.seek(wpos));
 
-		const std::uint32_t block_size = size;
-		FQUEUE_THROW_IF(true != file.write(&block_size, qi.wpos, sizeof(block_size)));
-		qi.wpos += sizeof(block_size);
+        const std::uint32_t block_size = static_cast<std::uint32_t>(size);
+        FQUEUE_THROW_IF(true != file.write(&block_size, qi.wpos, sizeof(block_size)));
+        qi.wpos += sizeof(block_size);
 
-		FQUEUE_THROW_IF(true != file.write(ptr, qi.wpos, size));
-		qi.wpos += size;
+        FQUEUE_THROW_IF(true != file.write(ptr, qi.wpos, size));
+        qi.wpos += size;
 
-		FQUEUE_EXPAND_EXPR(
-			std::cout
-			<< "buf+size=" << block_size+sizeof(block_size)
-			<< ", wpos=" << wpos
-			<< ", qi.wpos=" << qi.wpos << std::endl;
-		)
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "buf+size=" << block_size+sizeof(block_size)
+            << ", wpos=" << wpos
+            << ", qi.wpos=" << qi.wpos << std::endl;
+        )
 
-		++qi.records;
-		++qi.index;
+                ++qi.records;
+        ++qi.index;
 
-		FQUEUE_EXPAND_EXPR(
-			std::cout
-			<< "push(): wr: rpos=" << qi.rpos
-			<< ", wpos=" << qi.wpos
-			<< ", records=" << qi.records << std::endl;
-		)
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "push(): wr: rpos=" << qi.rpos
+            << ", wpos=" << qi.wpos
+            << ", records=" << qi.records << std::endl;
+        )
 
-		write_info(qi);
+        write_info(qi);
 
-		return qi.index;
-	}
+        return qi.index;
+    }
 
-	fqueue::record front() {
-		impl::queue_info qi;
-		read_info(&qi);
+    fqueue::record front() {
+        impl::queue_info qi;
+        read_info(&qi);
 
-		FQUEUE_THROW_IF(0 == qi.records);
+        FQUEUE_THROW_IF(0 == qi.records);
 
-		FQUEUE_EXPAND_EXPR(
-			std::cout
-			<< "front(): rd: rpos=" << qi.rpos
-			<< ", wpos=" << qi.wpos
-			<< ", records=" << qi.records << std::endl;
-		)
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "front(): rd: rpos=" << qi.rpos
+            << ", wpos=" << qi.wpos
+            << ", records=" << qi.records << std::endl;
+        )
 
-		FQUEUE_THROW_IF(true != file.seek(qi.rpos));
+        FQUEUE_THROW_IF(true != file.seek(qi.rpos));
 
-		std::uint32_t block_size = 0;
-		FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
+        std::uint32_t block_size = 0;
+        FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
 
-		std::unique_ptr<char[]> ptr(new char[block_size]);
-		FQUEUE_THROW_IF(!ptr);
+        std::unique_ptr<char[]> ptr(new char[block_size]);
+        FQUEUE_THROW_IF(!ptr);
 
-		fqueue::record rec = {
-			 qi.index
-			,std::move(ptr)
-			,block_size
-		};
+        fqueue::record rec = {
+            qi.index
+            ,std::move(ptr)
+            ,block_size
+        };
 
-		FQUEUE_THROW_IF(true != file.read(ptr.get(), block_size));
+        FQUEUE_THROW_IF(true != file.read(ptr.get(), block_size));
 
-		return rec;
-	}
-	fqueue::record pop() {
-		impl::queue_info qi;
-		read_info(&qi);
+        return rec;
+    }
+    fqueue::record pop() {
+        impl::queue_info qi;
+        read_info(&qi);
 
-		FQUEUE_THROW_IF(0 == qi.records);
+        FQUEUE_THROW_IF(0 == qi.records);
 
-		FQUEUE_EXPAND_EXPR(
-			std::cout
-			<< "pop(): rd: rpos=" << qi.rpos
-			<< ", wpos=" << qi.wpos
-			<< ", records=" << qi.records << std::endl;
-		)
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "pop(): rd: rpos=" << qi.rpos
+            << ", wpos=" << qi.wpos
+            << ", records=" << qi.records << std::endl;
+        )
 
-		FQUEUE_THROW_IF(true != file.seek(qi.rpos));
+        FQUEUE_THROW_IF(true != file.seek(qi.rpos));
 
-		std::uint32_t block_size = 0;
-		FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
-		qi.rpos += sizeof(block_size);
+        std::uint32_t block_size = 0;
+        FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
+        qi.rpos += sizeof(block_size);
 
-		std::unique_ptr<char[]> ptr(new char[block_size]);
-		FQUEUE_THROW_IF(!ptr);
+        std::unique_ptr<char[]> ptr(new char[block_size]);
+        FQUEUE_THROW_IF(!ptr);
 
-		fqueue::record rec = {
-			 qi.index
-			,std::move(ptr)
-			,block_size
-		};
+        fqueue::record rec = {
+            qi.index
+            ,std::move(ptr)
+            ,block_size
+        };
 
-		FQUEUE_THROW_IF(true != file.read(rec.ptr.get(), block_size));
-		qi.rpos += block_size;
+        FQUEUE_THROW_IF(true != file.read(rec.ptr.get(), block_size));
+        qi.rpos += block_size;
 
-		--qi.records;
-		if ( 0 == qi.records ) {
-			FQUEUE_THROW_IF(qi.rpos != qi.wpos);
-			qi.rpos = qi.wpos = size_of_queue_info;
-		}
+        --qi.records;
+        if ( 0 == qi.records ) {
+            FQUEUE_THROW_IF(qi.rpos != qi.wpos);
+            qi.rpos = qi.wpos = size_of_queue_info;
+        }
 
-		FQUEUE_EXPAND_EXPR(
-			std::cout
-			<< "pop(): rpos=" << qi.rpos
-			<< ", wpos=" << qi.wpos
-			<< ", records=" << qi.records
-			<< (qi.rpos == qi.wpos ? " - repositioning to front!" : "") << std::endl;
-		)
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "pop(): rpos=" << qi.rpos
+            << ", wpos=" << qi.wpos
+            << ", records=" << qi.records
+            << (qi.rpos == qi.wpos ? " - repositioning to front!" : "") << std::endl;
+        )
 
-		write_info(qi);
+        write_info(qi);
 
-		return rec;
-	}
+        return rec;
+    }
 
-	file_io file;
-	const std::uint32_t fsize;
+    file_io file;
+    const std::size_t fsize;
 };
 
 /**************************************************************************/
 
 fqueue::fqueue(const char *fname, std::size_t fsize)
-	:pimpl(new impl(fname, fsize))
+    :pimpl(new impl(fname, fsize))
 {}
 
 fqueue::fqueue(fqueue &&r)
-	:pimpl(r.pimpl)
+    :pimpl(r.pimpl)
 { r.pimpl = 0; }
 
 fqueue::~fqueue()
 { delete pimpl; }
 
 fqueue& fqueue::operator=(fqueue &&r) {
-	delete pimpl;
-	pimpl = r.pimpl;
-	r.pimpl = 0;
+    delete pimpl;
+    pimpl = r.pimpl;
+    r.pimpl = 0;
 
-	return *this;
+    return *this;
 }
 
 /**************************************************************************/

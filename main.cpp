@@ -71,11 +71,11 @@ std::size_t file_size(const char *fname) {
 
 /**************************************************************************/
 
-std::pair<std::unique_ptr<char[]>, std::size_t>
+std::pair<std::unique_ptr<char[]>, std::uint32_t>
 make_buf(std::size_t minsize, std::size_t maxsize) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(minsize, maxsize);
+    std::uniform_int_distribution<std::size_t> dis(minsize, maxsize);
     std::size_t size = dis(gen);
 
     std::unique_ptr<char[]> ptr(new char[size]);

@@ -8,14 +8,14 @@ QMAKE_CXXFLAGS += \
 	-std=c++11
 
 QMAKE_LFLAGS += \
-	-pthread
+	-pthread -lrt
 
 INCLUDEPATH += \
-	./include
+	../include
 
 SOURCES += \
 	main.cpp \
-	src/fqueue.cpp
+	../src/fqueue.cpp
 
 HEADERS += \
-	./include/fqueue/fqueue.hpp
+	../include/fqueue/fqueue.hpp

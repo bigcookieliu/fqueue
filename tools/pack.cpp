@@ -33,68 +33,11 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#include <cstdint>
-#include <memory>
+#include <fqueue/fqueue.hpp>
 
-namespace fqueue {
+#include <iostream>
 
-/**************************************************************************/
-
-struct fqueue {
-    fqueue() = delete;
-    fqueue(const fqueue &) = delete;
-    fqueue& operator=(const fqueue &) = delete;
-
-    fqueue(const char *fname, std::size_t fsize = 1024*1024*100);
-    fqueue(fqueue &&r);
-    fqueue& operator= (fqueue &&r);
-    virtual ~fqueue();
-
-    /* get the number of records in the data-file */
-    std::size_t records() const;
-
-    /* get the max record ID from the data-file */
-    std::uint64_t id() const;
-
-    /* check if data-file has no records */
-    bool empty() const;
-
-    /* clear the data-file records counter, but leave the file
-     * size and record ID unchanged */
-    void reset();
-
-    /* clear the data-file records counter and truncate the file
-     * size to 'fsize' specified in ctor, but leave the record ID unchanged */
-    void truncate();
-
-    /* push one record at back of the queue.
-     * return the last inserted ID ant time of the record */
-    std::pair<
-         std::uint64_t // ID
-        ,std::uint64_t // nstime
-    >
-    push(const void *ptr, std::uint32_t size);
-
-    struct record {
-        std::uint64_t nstime;
-        std::uint64_t id;
-        std::unique_ptr<char[]> ptr;
-        std::uint32_t size;
-    };
-
-    /* get front record */
-    record front();
-    /* pop front record */
-    record pop();
-
-    record first_record();
-    record next_record();
-
-private:
-    struct impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-/**************************************************************************/
-
-} // ns fqueue
+int main(int argc, char **argv) {
+	(void)argc;
+	(void)argv;
+}

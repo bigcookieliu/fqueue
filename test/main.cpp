@@ -94,7 +94,7 @@ void test00(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     fqueue::fqueue fq(fn);
     for ( std::size_t i = 0; i < iterations; ++i ) {
         const auto buf = make_buf(minsize, maxsize);
-        idxw = fq.push(buf.first.get(), buf.second);
+        idxw = fq.push(buf.first.get(), buf.second).first;
         sizes.push(buf.second);
     }
 
@@ -102,7 +102,7 @@ void test00(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 
     for ( std::size_t i = 0; i < iterations; ++i ) {
         fqueue::fqueue::record rec = fq.pop();
-        idxr = rec.idx;
+        idxr = rec.id;
         MY_ASSERT(sizes.front() == rec.size)
         sizes.pop();
     }
@@ -121,8 +121,8 @@ void test01(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
     for ( std::size_t i = 0; i < iterations; ++i ) {
         const auto buf = make_buf(minsize, maxsize);
-        std::uint64_t ii = fq.push(buf.first.get(), buf.second);
-        MY_ASSERT(ii == i+1);
+        std::uint64_t ii = fq.push(buf.first.get(), buf.second).first;
+        MY_ASSERT(ii == i);
         MY_ASSERT(fq.records() == 1);
 
         fqueue::fqueue::record rec = fq.pop();
@@ -147,26 +147,26 @@ void test02(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     fqueue::fqueue fq(fn);
     MY_ASSERT(fq.records() == 0);
     MY_ASSERT(fq.empty() == true);
-    MY_ASSERT(fq.index() == 0);
+    MY_ASSERT(fq.id() == 0);
 
     const auto buf = make_buf(minsize, maxsize);
 
     fq.push(buf.first.get(), buf.second);
     MY_ASSERT(fq.records() == 1);
-    MY_ASSERT(fq.index() == 1);
+    MY_ASSERT(fq.id() == 1);
 
     fq.push(buf.first.get(), buf.second);
     MY_ASSERT(fq.records() == 2);
-    MY_ASSERT(fq.index() == 2);
+    MY_ASSERT(fq.id() == 2);
 
     fq.pop();
     MY_ASSERT(fq.records() == 1);
-    MY_ASSERT(fq.index() == 2);
+    MY_ASSERT(fq.id() == 2);
 
     fq.pop();
     MY_ASSERT(fq.records() == 0);
     MY_ASSERT(fq.empty() == true);
-    MY_ASSERT(fq.index() == 2);
+    MY_ASSERT(fq.id() == 2);
 
     bool thrown = false;
     try {
@@ -175,7 +175,7 @@ void test02(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
         thrown = true;
     }
     MY_ASSERT(true == thrown);
-    MY_ASSERT(fq.index() == 2);
+    MY_ASSERT(fq.id() == 2);
 }
 
 /**************************************************************************/
@@ -206,6 +206,34 @@ void test03(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 
 /**************************************************************************/
 
+void test04(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
+    static const char *fn = "fq4.dat";
+    ::remove(fn);
+
+    fqueue::fqueue fq(fn, 0);
+    MY_ASSERT(fq.records() == 0);
+    MY_ASSERT(fq.empty() == true);
+    MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
+
+    for ( std::size_t i = 0; i < iterations; ++i ) {
+        const auto buf = make_buf(minsize, maxsize);
+        auto res = fq.push(buf.first.get(), buf.second);
+        std::cout << "id=" << res.first << ", nstime=" << res.second << std::endl;
+    }
+    MY_ASSERT(fq.records() == iterations);
+    MY_ASSERT(fq.empty() == false);
+
+    auto res = fq.first_record();
+    std::cout << "id=" << res.id << ", nstime=" << res.nstime << std::endl;
+
+    for ( std::size_t i = 0; i < iterations-1; ++i ) {
+        res = fq.next_record();
+        std::cout << "id=" << res.id << ", nstime=" << res.nstime << std::endl;
+    }
+}
+
+/**************************************************************************/
+
 int main() {
     static const std::size_t N = 1024;
     static const std::size_t minsize = 47;
@@ -215,6 +243,7 @@ int main() {
     RUN_TEST(test01(N, minsize, maxsize));
     RUN_TEST(test02(N, minsize, maxsize));
     RUN_TEST(test03(N, minsize, maxsize));
+    RUN_TEST(test04(N, minsize, maxsize));
 }
 
 /**************************************************************************/

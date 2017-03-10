@@ -64,17 +64,32 @@ namespace fqueue {
 
 /**************************************************************************/
 
+struct fqueue_exception: std::runtime_error {
+    explicit fqueue_exception(const char *msg)
+        :std::runtime_error(msg)
+    {}
+    explicit fqueue_exception(const std::string &msg)
+        :std::runtime_error(msg)
+    {}
+    virtual ~fqueue_exception();
+
+    virtual const char* what() const noexcept { return std::runtime_error::what(); }
+};
+fqueue_exception::~fqueue_exception() {}
+
+/**************************************************************************/
+
 #define _STRINGIZE(x) #x
 #define STRINGIZE(x) _STRINGIZE(x)
 
 #define FQUEUE_THROW(...) \
-    throw std::runtime_error(std::string("FQUEUE: " __FILE__ "(" STRINGIZE(__LINE__) "): ") + __VA_ARGS__)
+    throw ::fqueue::fqueue_exception(std::string("FQUEUE: " __FILE__ "(" STRINGIZE(__LINE__) "): ") + __VA_ARGS__)
 
 #ifdef _WIN32
 #define FQUEUE_THROW_IF(expr) \
     if ( (expr) ) { \
         char buf[32]; \
-        ::snprintf(buf, sizeof(buf), "%u", (unsigned)::GetLastError()); \
+        ::snprintf(buf, sizeof(buf), "%u", static_cast<std::uint32_t>(::GetLastError())); \
         FQUEUE_THROW("expression \"" #expr "\" is true with GetLastError()=" + buf); \
     }
 #else
@@ -207,7 +222,7 @@ struct fqueue::impl {
         std::uint64_t rpos;
         std::uint64_t wpos;
         std::uint64_t records;
-        std::uint64_t index;
+        std::uint64_t id;
     };
     enum { size_of_queue_info = sizeof(queue_info) };
     static_assert(size_of_queue_info == sizeof(std::uint64_t)*4, "bad sizeof(queue_info)");
@@ -235,7 +250,7 @@ struct fqueue::impl {
 
     static std::uint64_t current_time() {
         ::timespec ts;
-        ::clock_gettime(CLOCK_REALTIME_COARSE, &ts);
+        ::clock_gettime(CLOCK_REALTIME, &ts);
 
         return static_cast<std::uint64_t>((ts.tv_sec*1000000000ll)+ts.tv_nsec);
     }
@@ -247,11 +262,11 @@ struct fqueue::impl {
         return qi.records;
     }
 
-    std::uint64_t index() {
+    std::uint64_t id() {
         queue_info qi;
         read_info(&qi);
 
-        return qi.index;
+        return qi.id;
     }
 
     void write_info(const queue_info &qi) {
@@ -280,8 +295,9 @@ struct fqueue::impl {
         }
     }
 
-    std::uint64_t push(const void *ptr, std::uint32_t size) {
-        impl::queue_info qi = {0,0,0,0};
+    std::pair<std::uint64_t, std::uint64_t>
+    push(const void *ptr, std::uint32_t size) {
+        queue_info qi = {0,0,0,0};
         read_info(&qi);
 
         FQUEUE_EXPAND_EXPR(
@@ -293,6 +309,10 @@ struct fqueue::impl {
 
         const std::uint64_t wpos = qi.wpos;
         FQUEUE_THROW_IF(true != file.seek(wpos));
+
+        const std::uint64_t id = qi.id;
+        FQUEUE_THROW_IF(true != file.write(&id, qi.wpos, sizeof(id)));
+        qi.wpos += sizeof(id);
 
         const std::uint64_t nstime = current_time();
         FQUEUE_THROW_IF(true != file.write(&nstime, qi.wpos, sizeof(nstime)));
@@ -312,7 +332,7 @@ struct fqueue::impl {
         )
 
         ++qi.records;
-        ++qi.index;
+        ++qi.id;
 
         FQUEUE_EXPAND_EXPR(
             std::cout
@@ -323,11 +343,34 @@ struct fqueue::impl {
 
         write_info(qi);
 
-        return qi.index;
+        return {id, nstime};
+    }
+
+    fqueue::record read() {
+        std::uint64_t id = 0;
+        FQUEUE_THROW_IF(true != file.read(&id, sizeof(id)));
+
+        std::uint64_t nstime = 0;
+        FQUEUE_THROW_IF(true != file.read(&nstime, sizeof(nstime)));
+
+        std::uint32_t block_size = 0;
+        FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
+
+        std::unique_ptr<char[]> ptr(new char[block_size]);
+        FQUEUE_THROW_IF(true != file.read(ptr.get(), block_size));
+
+        fqueue::record rec = {
+             nstime
+            ,id
+            ,std::move(ptr)
+            ,block_size
+        };
+
+        return rec;
     }
 
     fqueue::record front() {
-        impl::queue_info qi;
+        queue_info qi;
         read_info(&qi);
 
         FQUEUE_THROW_IF(0 == qi.records);
@@ -341,28 +384,11 @@ struct fqueue::impl {
 
         FQUEUE_THROW_IF(true != file.seek(qi.rpos));
 
-        std::uint64_t nstime = 0;
-        FQUEUE_THROW_IF(true != file.read(&nstime, sizeof(nstime)));
-
-        std::uint32_t block_size = 0;
-        FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
-
-        std::unique_ptr<char[]> ptr(new char[block_size]);
-        FQUEUE_THROW_IF(!ptr);
-
-        fqueue::record rec = {
-             nstime
-            ,qi.index
-            ,std::move(ptr)
-            ,block_size
-        };
-
-        FQUEUE_THROW_IF(true != file.read(ptr.get(), block_size));
-
-        return rec;
+        return read();
     }
+
     fqueue::record pop() {
-        impl::queue_info qi;
+        queue_info qi;
         read_info(&qi);
 
         FQUEUE_THROW_IF(0 == qi.records);
@@ -376,26 +402,14 @@ struct fqueue::impl {
 
         FQUEUE_THROW_IF(true != file.seek(qi.rpos));
 
-        std::uint64_t nstime = 0;
-        FQUEUE_THROW_IF(true != file.read(&nstime, sizeof(nstime)));
-        qi.rpos += sizeof(nstime);
+        fqueue::record rec = read();
 
-        std::uint32_t block_size = 0;
-        FQUEUE_THROW_IF(true != file.read(&block_size, sizeof(block_size)));
-        qi.rpos += sizeof(block_size);
-
-        std::unique_ptr<char[]> ptr(new char[block_size]);
-        FQUEUE_THROW_IF(!ptr);
-
-        fqueue::record rec = {
-             nstime
-            ,qi.index
-            ,std::move(ptr)
-            ,block_size
-        };
-
-        FQUEUE_THROW_IF(true != file.read(rec.ptr.get(), block_size));
-        qi.rpos += block_size;
+        qi.rpos +=
+              sizeof(std::uint64_t) // id
+            + sizeof(std::uint64_t) // nstime
+            + sizeof(std::uint32_t) // block size
+            + rec.size
+        ;
 
         --qi.records;
         if ( 0 == qi.records ) {
@@ -416,6 +430,10 @@ struct fqueue::impl {
         return rec;
     }
 
+    fqueue::record first_record() { return front(); }
+    fqueue::record next_record() { return read(); }
+
+private:
     file_io file;
     const std::size_t fsize;
 };
@@ -426,17 +444,18 @@ fqueue::fqueue(const char *fname, std::size_t fsize)
     :pimpl(new impl(fname, fsize))
 {}
 
-fqueue::fqueue(fqueue &&r)
-    :pimpl(r.pimpl)
-{ r.pimpl = 0; }
-
 fqueue::~fqueue()
-{ delete pimpl; }
+{}
+
+fqueue::fqueue(fqueue &&r)
+    :pimpl(std::move(r.pimpl))
+{
+    r.pimpl.reset();
+}
 
 fqueue& fqueue::operator=(fqueue &&r) {
-    delete pimpl;
-    pimpl = r.pimpl;
-    r.pimpl = 0;
+    pimpl = std::move(r.pimpl);
+    r.pimpl.reset();
 
     return *this;
 }
@@ -444,16 +463,20 @@ fqueue& fqueue::operator=(fqueue &&r) {
 /**************************************************************************/
 
 std::size_t fqueue::records() const { return pimpl->records(); }
-std::uint64_t fqueue::index() const { return pimpl->index(); }
+std::uint64_t fqueue::id() const { return pimpl->id(); }
 
 bool fqueue::empty() const { return 0 == pimpl->records(); }
 
 void fqueue::reset() { pimpl->reset(); }
 void fqueue::truncate() { pimpl->truncate(); }
 
-std::uint64_t fqueue::push(const void *ptr, std::uint32_t size) { return pimpl->push(ptr, size); }
+std::pair<std::uint64_t, std::uint64_t>
+fqueue::push(const void *ptr, std::uint32_t size) { return pimpl->push(ptr, size); }
 fqueue::record fqueue::front() { return pimpl->front(); }
 fqueue::record fqueue::pop() { return pimpl->pop(); }
+
+fqueue::record fqueue::first_record() { return pimpl->first_record(); }
+fqueue::record fqueue::next_record() { return pimpl->next_record(); }
 
 /**************************************************************************/
 

@@ -98,7 +98,7 @@ std::string format_fsize(std::uint64_t fs) {
         return buf;
     }
 
-    std::snprintf(buf, sizeof(buf), "%u b", (unsigned)fs);
+    std::snprintf(buf, sizeof(buf), "%u", (unsigned)fs);
     return buf;
 }
 

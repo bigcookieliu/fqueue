@@ -82,12 +82,16 @@ struct fqueue {
         std::uint32_t size;
     };
 
+    /* get front record ID */
+    std::uint64_t front_record_id() const;
+
     /* get front record */
-    record front();
+    record front() const;
+
     /* pop front record */
     record pop();
 
-    record first_record();
+    record first_record() const;
     record next_record();
 
 private:

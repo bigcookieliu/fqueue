@@ -51,8 +51,9 @@
 
 void usage(const char *argv0) {
     const char *p = std::strrchr(argv0, '/');
-    
-    std::cout << "usage: " << p+1 << " <fqueue file name>" << std::endl;
+    p = (p ? p+1 : "info");
+
+    std::cout << "usage: " << p << " <fqueue file name>" << std::endl;
 }
 
 /***************************************************************************/
@@ -69,11 +70,11 @@ std::string format_time(std::uint64_t nstime) {
 
     std::time_t secs = nstime/1000000000llu;
     std::size_t nsecs= nstime%1000000000llu;
-    
+
     std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ::localtime(&secs));
     std::string res(buf);
     res += "." + std::to_string(nsecs);
-    
+
     return res;
 }
 
@@ -111,13 +112,13 @@ int main(int argc, char **argv) {
         usage(argv[0]);
         return EXIT_SUCCESS;
     }
-    
+
     const char *fname = argv[1];
     if ( 0 != ::access(fname, F_OK) ) {
         std::cerr << "can't open file " << fname << ". terminate." << std::endl;
         return EXIT_FAILURE;
     }
-    
+
     fqueue::fqueue fq(fname);
 
     std::size_t filesize = file_size(fname);
@@ -129,12 +130,12 @@ int main(int argc, char **argv) {
         ,mindatasize=std::numeric_limits<std::size_t>::max()
         ,maxdatasize=std::numeric_limits<std::size_t>::min()
     ;
-    
+
     auto rec = fq.first_record();
     datasize += rec.size;
     minid = rec.id;
     mintime = rec.nstime;
-    
+
     for ( std::size_t i = 0; i < records-1; ++i ) {
         rec = fq.next_record();
         datasize += rec.size;
@@ -143,7 +144,7 @@ int main(int argc, char **argv) {
     }
     maxid = rec.id;
     maxtime = rec.nstime;
-    
+
     std::cout
     << "file size: " << format_fsize(filesize) << std::endl
     << "records  : " << records << std::endl

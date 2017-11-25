@@ -37,7 +37,40 @@
 
 #include <iostream>
 
-int main(int argc, char **argv) {
-	(void)argc;
-	(void)argv;
+/***************************************************************************/
+
+void usage(const char *argv0) {
+    const char *p = std::strrchr(argv0, '/');
+    p = (p ? p+1 : "info");
+
+    std::cout << "usage: " << p << " <fqueue file name> <path to records dir>" << std::endl;
 }
+
+/***************************************************************************/
+
+int main(int argc, char **argv) {
+    if ( argc != 3 ) {
+        usage(argv[0]);
+        return EXIT_SUCCESS;
+    }
+
+    const char *fname = argv[1];
+    if ( 0 != ::access(fname, F_OK) ) {
+        std::cerr << "fqueue file \"" << fname << "\" is not exists. terminate." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    const char *path = argv[2];
+    if ( 0 != ::access(path, F_OK) ) {
+        std::cerr << "records dir \"" << path << "\" is not exists. terminate." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    fqueue::fqueue fq(fname);
+    if ( fq.empty() ) {
+        std::cerr << "fqueue file \"" << fname << "\" is empty. terminate." << std::endl;
+        return EXIT_SUCCESS;
+    }
+}
+
+/***************************************************************************/

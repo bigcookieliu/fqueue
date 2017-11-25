@@ -38,17 +38,13 @@
 #include <stdexcept>
 #include <ctime>
 
-#ifdef _WIN32
-#	include <windows.h>
-#else
-#	include <sys/types.h>
-#	include <sys/stat.h>
-#	include <fcntl.h>
-#	include <string.h>
-#	include <unistd.h>
-#	include <stdio.h>
-#	include <errno.h>
-#endif
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
 
 #define FQUEUE_DEBUG_ENABLED 0
 
@@ -85,83 +81,14 @@ fqueue_exception::~fqueue_exception() {}
 #define FQUEUE_THROW(...) \
     throw ::fqueue::fqueue_exception(std::string("FQUEUE: " __FILE__ "(" STRINGIZE(__LINE__) "): ") + __VA_ARGS__)
 
-#ifdef _WIN32
-#define FQUEUE_THROW_IF(expr) \
-    if ( (expr) ) { \
-        char buf[32]; \
-        ::snprintf(buf, sizeof(buf), "%u", static_cast<std::uint32_t>(::GetLastError())); \
-        FQUEUE_THROW("expression \"" #expr "\" is true with GetLastError()=" + buf); \
-    }
-#else
 #define FQUEUE_THROW_IF(expr) \
     if ( (expr) ) { \
         char buf[32]; \
         ::snprintf(buf, sizeof(buf), "%d", errno); \
         FQUEUE_THROW("expression \"" #expr "\" is true with errno=" + buf); \
     }
-#endif // _WIN32
 
 /**************************************************************************/
-
-#ifdef _WIN32
-
-struct file_io {
-    file_io(const char *fname)
-        :fd(INVALID_HANDLE_VALUE)
-    {
-        fd = ::CreateFileA(
-             fname
-            ,GENERIC_READ|GENERIC_WRITE
-            ,0
-            ,NULL
-            ,CREATE_NEW
-            ,FILE_FLAG_WRITE_THROUGH|FILE_FLAG_NO_BUFFERING
-            ,NULL
-        );
-        FQUEUE_THROW_IF(fd == INVALID_HANDLE_VALUE);
-    }
-    ~file_io() {
-        if ( is_open() )
-            close();
-    }
-
-    bool is_open() const { return fd != INVALID_HANDLE_VALUE; }
-    void close() { ::CloseHandle(fd); fd = INVALID_HANDLE_VALUE; }
-
-    std::size_t size() {
-        LARGE_INTEGER fsize;
-        ::GetFileSizeEx(fd, &fsize);
-
-        return fsize.QuadPart;
-    }
-
-    bool resize(std::size_t size) {
-        if ( INVALID_SET_FILE_POINTER != ::SetFilePointer(fd, size, NULL, FILE_BEGIN) ) {
-            return TRUE == ::SetEndOfFile(fd);
-        }
-
-        return false;
-    }
-
-    bool seek(std::size_t pos) {
-        return INVALID_SET_FILE_POINTER != ::SetFilePointer(fd, pos, NULL, FILE_BEGIN);
-    }
-
-    bool write(const void *ptr, std::size_t /*spos*/, std::size_t size) {
-        DWORD wr = 0;
-        // TODO: flush
-        return TRUE == ::WriteFile(fd, ptr, size, &wr, NULL) && wr == size;
-    }
-    bool read(void *ptr, std::size_t size) {
-        DWORD rd = 0;
-        return TRUE == ::ReadFile(fd, ptr, size, &rd, NULL) && rd == size;
-    }
-
-private:
-    HANDLE fd;
-};
-
-#else
 
 struct file_io {
     file_io(const char *fname)
@@ -212,8 +139,6 @@ struct file_io {
 private:
     int fd;
 };
-
-#endif
 
 /**************************************************************************/
 
@@ -273,7 +198,7 @@ struct fqueue::impl {
         FQUEUE_THROW_IF(true != file.seek(0));
         FQUEUE_THROW_IF(true != file.write(&qi, 0, size_of_queue_info));
     }
-    void read_info(queue_info *qi) {
+    void read_info(queue_info *qi) const {
         FQUEUE_THROW_IF(true != file.seek(0));
         FQUEUE_THROW_IF(true != file.read(qi, size_of_queue_info));
     }
@@ -369,6 +294,27 @@ struct fqueue::impl {
         return rec;
     }
 
+    std::uint64_t front_record_id() const {
+        queue_info qi;
+        read_info(&qi);
+
+        FQUEUE_THROW_IF(0 == qi.records);
+
+        FQUEUE_EXPAND_EXPR(
+            std::cout
+            << "front_record_id(): rd: rpos=" << qi.rpos
+            << ", wpos=" << qi.wpos
+            << ", records=" << qi.records << std::endl;
+        )
+
+        FQUEUE_THROW_IF(true != file.seek(qi.rpos));
+
+        std::uint64_t id = 0;
+        FQUEUE_THROW_IF(true != file.read(&id, sizeof(id)));
+
+        return id;
+    }
+
     fqueue::record front() {
         queue_info qi;
         read_info(&qi);
@@ -434,7 +380,7 @@ struct fqueue::impl {
     fqueue::record next_record() { return read(); }
 
 private:
-    file_io file;
+    mutable file_io file;
     const std::size_t fsize;
 };
 
@@ -472,10 +418,12 @@ void fqueue::truncate() { pimpl->truncate(); }
 
 std::pair<std::uint64_t, std::uint64_t>
 fqueue::push(const void *ptr, std::uint32_t size) { return pimpl->push(ptr, size); }
-fqueue::record fqueue::front() { return pimpl->front(); }
+
+std::uint64_t fqueue::front_record_id() const { return pimpl->front_record_id(); }
+fqueue::record fqueue::front() const { return pimpl->front(); }
 fqueue::record fqueue::pop() { return pimpl->pop(); }
 
-fqueue::record fqueue::first_record() { return pimpl->first_record(); }
+fqueue::record fqueue::first_record() const { return pimpl->first_record(); }
 fqueue::record fqueue::next_record() { return pimpl->next_record(); }
 
 /**************************************************************************/

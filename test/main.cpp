@@ -122,10 +122,12 @@ void test01(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     for ( std::size_t i = 0; i < iterations; ++i ) {
         const auto buf = make_buf(minsize, maxsize);
         std::uint64_t ii = fq.push(buf.first.get(), buf.second).first;
+        MY_ASSERT(ii == fq.front_record_id());
         MY_ASSERT(ii == i);
         MY_ASSERT(fq.records() == 1);
 
         fqueue::fqueue::record rec = fq.pop();
+        MY_ASSERT(rec.id == i);
         MY_ASSERT(fq.records() == 0);
         MY_ASSERT(rec.size == buf.second);
         MY_ASSERT(0 == std::memcmp(rec.ptr.get(), buf.first.get(), buf.second));
@@ -154,14 +156,17 @@ void test02(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     fq.push(buf.first.get(), buf.second);
     MY_ASSERT(fq.records() == 1);
     MY_ASSERT(fq.id() == 1);
+    MY_ASSERT(fq.front_record_id() == 0);
 
     fq.push(buf.first.get(), buf.second);
     MY_ASSERT(fq.records() == 2);
     MY_ASSERT(fq.id() == 2);
+    MY_ASSERT(fq.front_record_id() == 0);
 
     fq.pop();
     MY_ASSERT(fq.records() == 1);
     MY_ASSERT(fq.id() == 2);
+    MY_ASSERT(fq.front_record_id() == 1);
 
     fq.pop();
     MY_ASSERT(fq.records() == 0);
@@ -195,6 +200,7 @@ void test03(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     }
     MY_ASSERT(fq.records() == iterations);
     MY_ASSERT(fq.empty() == false);
+    MY_ASSERT(fq.front_record_id() == 0);
 
     std::size_t fsize = file_size(fn);
 
@@ -222,14 +228,13 @@ void test04(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
         const auto buf = make_buf(minsize, maxsize);
         auto res = fq.push(buf.first.get(), buf.second);
         queue.push(res);
-//        std::cout << "id=" << res.first << ", nstime=" << res.second << std::endl;
     }
     MY_ASSERT(queue.size() == iterations);
     MY_ASSERT(fq.records() == iterations);
     MY_ASSERT(fq.empty() == false);
+    MY_ASSERT(fq.front_record_id() == 0);
 
     auto rec = fq.first_record();
-//    std::cout << "id=" << res.id << ", nstime=" << res.nstime << std::endl;
     auto qrec = queue.front();
     MY_ASSERT(rec.id == qrec.first);
     MY_ASSERT(rec.nstime == qrec.second);
@@ -237,7 +242,6 @@ void test04(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 
     for ( std::size_t i = 0; i < iterations-1; ++i ) {
         rec = fq.next_record();
-//        std::cout << "id=" << res.id << ", nstime=" << res.nstime << std::endl;
         qrec = queue.front();
         MY_ASSERT(rec.id == qrec.first);
         MY_ASSERT(rec.nstime == qrec.second);

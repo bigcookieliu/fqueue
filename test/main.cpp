@@ -99,6 +99,7 @@ void test00(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     }
 
     MY_ASSERT(fq.records() == iterations);
+    MY_ASSERT(fq.id() == iterations);
 
     for ( std::size_t i = 0; i < iterations; ++i ) {
         fqueue::fqueue::record rec = fq.pop();
@@ -109,6 +110,7 @@ void test00(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
 
     MY_ASSERT(idxw == idxr);
     MY_ASSERT(fq.records() == 0);
+    MY_ASSERT(fq.id() == iterations);
 }
 
 /**************************************************************************/
@@ -125,10 +127,13 @@ void test01(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
         MY_ASSERT(ii == fq.front_record_id());
         MY_ASSERT(ii == i);
         MY_ASSERT(fq.records() == 1);
+        MY_ASSERT(fq.id() == i+1);
 
         fqueue::fqueue::record rec = fq.pop();
         MY_ASSERT(rec.id == i);
         MY_ASSERT(fq.records() == 0);
+        MY_ASSERT(fq.id() == i+1);
+
         MY_ASSERT(rec.size == buf.second);
         MY_ASSERT(0 == std::memcmp(rec.ptr.get(), buf.first.get(), buf.second));
     }
@@ -136,6 +141,7 @@ void test01(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     MY_ASSERT(file_size(fn) != sizeof(std::uint64_t)*4);
     fq.truncate();
     MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
+    MY_ASSERT(fq.id() == iterations);
 }
 
 /**************************************************************************/
@@ -192,6 +198,7 @@ void test03(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     fqueue::fqueue fq(fn, 0);
     MY_ASSERT(fq.records() == 0);
     MY_ASSERT(fq.empty() == true);
+    MY_ASSERT(fq.id() == 0);
     MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
 
     for ( std::size_t i = 0; i < iterations; ++i ) {
@@ -200,6 +207,7 @@ void test03(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     }
     MY_ASSERT(fq.records() == iterations);
     MY_ASSERT(fq.empty() == false);
+    MY_ASSERT(fq.id() == iterations);
     MY_ASSERT(fq.front_record_id() == 0);
 
     std::size_t fsize = file_size(fn);
@@ -207,6 +215,7 @@ void test03(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     fq.reset();
     MY_ASSERT(fq.records() == 0);
     MY_ASSERT(fq.empty() == true);
+    MY_ASSERT(fq.id() == iterations);
     MY_ASSERT(fsize == file_size(fn));
 }
 
@@ -219,6 +228,7 @@ void test04(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     fqueue::fqueue fq(fn, 0);
     MY_ASSERT(fq.records() == 0);
     MY_ASSERT(fq.empty() == true);
+    MY_ASSERT(fq.id() == 0);
     MY_ASSERT(file_size(fn) == sizeof(std::uint64_t)*4);
 
     using qitem = std::pair<std::uint64_t, std::uint64_t>;
@@ -232,6 +242,7 @@ void test04(std::size_t iterations, std::size_t minsize, std::size_t maxsize) {
     MY_ASSERT(queue.size() == iterations);
     MY_ASSERT(fq.records() == iterations);
     MY_ASSERT(fq.empty() == false);
+    MY_ASSERT(fq.id() == iterations);
     MY_ASSERT(fq.front_record_id() == 0);
 
     auto rec = fq.first_record();

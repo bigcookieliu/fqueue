@@ -1,5 +1,5 @@
 
-// Copyright (c) 2015-2017 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2015-2020 niXman (i dot nixman dog gmail dot com). All
 // rights reserved.
 //
 // This file is part of FQUEUE(https://github.com/niXman/fqueue) project.

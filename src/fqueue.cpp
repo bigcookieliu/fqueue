@@ -388,19 +388,6 @@ fqueue::fqueue(const char *fname, std::size_t fsize)
 fqueue::~fqueue()
 {}
 
-fqueue::fqueue(fqueue &&r)
-    :pimpl(std::move(r.pimpl))
-{
-    r.pimpl.reset();
-}
-
-fqueue& fqueue::operator=(fqueue &&r) {
-    pimpl = std::move(r.pimpl);
-    r.pimpl.reset();
-
-    return *this;
-}
-
 /**************************************************************************/
 
 std::size_t fqueue::records() const { return pimpl->records(); }

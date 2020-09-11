@@ -43,11 +43,11 @@ namespace fqueue {
 struct fqueue {
     fqueue() = delete;
     fqueue(const fqueue &) = delete;
+    fqueue(fqueue &&) = default;
     fqueue& operator=(const fqueue &) = delete;
+    fqueue& operator= (fqueue &&r) = default;
 
     fqueue(const char *fname, std::size_t fsize = 1024*1024*100);
-    fqueue(fqueue &&r);
-    fqueue& operator= (fqueue &&r);
     virtual ~fqueue();
 
     /* get the number of records in the data-file */

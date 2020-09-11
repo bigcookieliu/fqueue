@@ -120,14 +120,9 @@ struct file_io {
         return pos == static_cast<std::size_t>(::lseek(fd, pos, SEEK_SET));
     }
 
-    bool write(const void *ptr, std::size_t spos, std::size_t size) {
+    bool write(const void *ptr, std::size_t size) {
         if ( size == static_cast<std::size_t>(::write(fd, ptr, size)) ) {
-            return 0 == ::sync_file_range(
-                 fd
-                ,spos
-                ,size
-                ,SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE|SYNC_FILE_RANGE_WAIT_AFTER
-            );
+            return 0 == ::fsync(fd);
         }
 
         return false;
@@ -196,7 +191,7 @@ struct fqueue::impl {
 
     void write_info(const queue_info &qi) {
         FQUEUE_THROW_IF(true != file.seek(0));
-        FQUEUE_THROW_IF(true != file.write(&qi, 0, size_of_queue_info));
+        FQUEUE_THROW_IF(true != file.write(&qi, size_of_queue_info));
     }
     void read_info(queue_info *qi) const {
         FQUEUE_THROW_IF(true != file.seek(0));
@@ -236,17 +231,17 @@ struct fqueue::impl {
         FQUEUE_THROW_IF(true != file.seek(wpos));
 
         const std::uint64_t id = qi.id;
-        FQUEUE_THROW_IF(true != file.write(&id, qi.wpos, sizeof(id)));
+        FQUEUE_THROW_IF(true != file.write(&id, sizeof(id)));
         qi.wpos += sizeof(id);
 
         const std::uint64_t nstime = current_time();
-        FQUEUE_THROW_IF(true != file.write(&nstime, qi.wpos, sizeof(nstime)));
+        FQUEUE_THROW_IF(true != file.write(&nstime, sizeof(nstime)));
         qi.wpos += sizeof(nstime);
 
-        FQUEUE_THROW_IF(true != file.write(&size, qi.wpos, sizeof(size)));
+        FQUEUE_THROW_IF(true != file.write(&size, sizeof(size)));
         qi.wpos += sizeof(size);
 
-        FQUEUE_THROW_IF(true != file.write(ptr, qi.wpos, size));
+        FQUEUE_THROW_IF(true != file.write(ptr, size));
         qi.wpos += size;
 
         FQUEUE_EXPAND_EXPR(

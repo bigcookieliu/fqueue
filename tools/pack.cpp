@@ -37,7 +37,22 @@
 
 #include <iostream>
 
-int main(int argc, char **argv) {
-	(void)argc;
-	(void)argv;
+/***************************************************************************/
+
+void usage(const char *argv0) {
+    const char *p = std::strrchr(argv0, '/');
+    p = (p ? p+1 : "pack");
+
+    std::cout << "usage: " << p << " <path to dir with records> <fqueue file name>" << std::endl;
 }
+
+/***************************************************************************/
+
+int main(int argc, char **argv) {
+    if ( argc != 3 ) {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+}
+
+/***************************************************************************/

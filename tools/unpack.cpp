@@ -36,6 +36,9 @@
 #include <fqueue/fqueue.hpp>
 
 #include <iostream>
+#include <fstream>
+
+#include <cstring>
 
 /***************************************************************************/
 
@@ -48,6 +51,13 @@ void usage(const char *argv0) {
 
 /***************************************************************************/
 
+bool exists(const char *fname) {
+	std::ifstream file(fname);
+	return file.good();
+}
+
+/***************************************************************************/
+
 int main(int argc, char **argv) {
     if ( argc != 3 ) {
         usage(argv[0]);
@@ -55,13 +65,13 @@ int main(int argc, char **argv) {
     }
 
     const char *fname = argv[1];
-    if ( 0 != ::access(fname, F_OK) ) {
+    if ( !exists(fname) ) {
         std::cerr << "fqueue file \"" << fname << "\" is not exists. terminate." << std::endl;
         return EXIT_FAILURE;
     }
 
     const char *path = argv[2];
-    if ( 0 != ::access(path, F_OK) ) {
+    if ( !exists(path) ) {
         std::cerr << "records dir \"" << path << "\" is not exists. terminate." << std::endl;
         return EXIT_FAILURE;
     }
